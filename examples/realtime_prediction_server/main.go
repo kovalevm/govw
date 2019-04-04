@@ -7,7 +7,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/DonCasper/govw"
+	"github.com/kovalevm/govw"
 )
 
 var vw govw.VWDaemon
@@ -49,7 +49,7 @@ func runServer() {
 
 func main() {
 	//vw = govw.NewDaemon("vw", [2]int{26542, 26543}, 1000, "/full/path/to/some.model", true, true)
-	vw = govw.NewDaemon("vw", [2]int{26542, 26543}, 1000, "/home/casper/Golab/src/smartyads/go_app_server/models/click.model", true, true)
+	vw = govw.NewDaemon("vw", [2]int{26542, 26543}, 1000, "/home/casper/Golab/src/smartyads/go_app_server/models/click.model", true, true, "")
 	if err := vw.Run(); err != nil {
 		log.Fatal("Error while running VW daemon!", err)
 	}

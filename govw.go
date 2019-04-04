@@ -31,6 +31,7 @@ type VWDaemon struct {
 	Model    VWModel
 	Test     bool
 	TCPQueue chan *net.TCPConn
+	VwOpts   string
 }
 
 // Predict contain result of prediction
@@ -39,8 +40,8 @@ type Prediction struct {
 	Tag   string
 }
 
-// NewDaemon method return instanse of new Vowpal Wabbit daemon
-func NewDaemon(binPath string, ports [2]int, children int, modelPath string, test bool, updatable bool) VWDaemon {
+// NewDaemon method return instance of new Vowpal Wabbit daemon
+func NewDaemon(binPath string, ports [2]int, children int, modelPath string, test bool, updatable bool, vwOpts string) VWDaemon {
 	info, err := os.Stat(modelPath)
 	if err != nil {
 		log.Fatal(err)
@@ -52,6 +53,7 @@ func NewDaemon(binPath string, ports [2]int, children int, modelPath string, tes
 		Children: children,
 		Model:    VWModel{modelPath, info.ModTime(), updatable},
 		Test:     test,
+		VwOpts:   vwOpts,
 	}
 }
 
@@ -96,6 +98,10 @@ func (vw *VWDaemon) Run() error {
 		cmd += " -t"
 	}
 
+	if vw.VwOpts != "" {
+		cmd += " " + vw.VwOpts
+	}
+
 	if _, err := runCommand(cmd, true); err != nil {
 		panic(err)
 	}
@@ -133,7 +139,7 @@ func (vw *VWDaemon) Stop() error {
 		}
 	}
 
-	log.Println("Stoped VW daemon on port:", vw.Port[0])
+	log.Println("Stopped VW daemon on port:", vw.Port[0])
 
 	log.Printf("Start closing TCP connections to: %d (%d)\n", vw.Port[0], len(vw.TCPQueue))
 	for i := 0; i < len(vw.TCPQueue); i++ {
@@ -207,13 +213,13 @@ func (vw *VWDaemon) WorkersCount() (int, error) {
 		return 0, err
 	}
 
-	// We should substract 1 from count, to get clear result without
+	// We should subtract 1 from count, to get clear result without
 	// side effect of using `sh -c` command in `exec.Command`.
 	return count - 1, nil
 }
 
-// IsNotDead method checks if VW daemon and all of his childrens is running.
-// You shoud defain count of tries and delay in milliseconds between each try.
+// IsNotDead method checks if VW daemon and all of his children is running.
+// You should define count of tries and delay in milliseconds between each try.
 func (vw *VWDaemon) IsNotDead(tries int, delay int) bool {
 	var count int
 	var err error
@@ -234,8 +240,8 @@ func (vw *VWDaemon) IsNotDead(tries int, delay int) bool {
 	return false
 }
 
-// IsExist method checks if VW daemon and all of his childrens is running.
-// You shoud defain count of tries and delay in milliseconds between each try.
+// IsExist method checks if VW daemon and all of his children is running.
+// You should define count of tries and delay in milliseconds between each try.
 func (vw *VWDaemon) IsExist(tries int, delay int) bool {
 	var count int
 	var err error

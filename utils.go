@@ -23,7 +23,7 @@ func runCommand(command string, quiet bool) ([]byte, error) {
 		}
 		return []byte{}, nil
 	default:
-		panic("We have some problem with execing command!")
+		panic("We have some problem with executing command!")
 	}
 }
 
@@ -47,12 +47,12 @@ func ParsePredictResult(predict *string) *Prediction {
 }
 
 // RecreateDaemon create new VW daemon on another port (default VW port + 1),
-// check if all his childrens is wakeup, substitute link to new VW daemon instance.
+// check if all his children is wakeup, substitute link to new VW daemon instance.
 func RecreateDaemon(d *VWDaemon) {
 	log.Println("Start recreating daemon on new port:", d.Port[1])
 
 	port := [2]int{d.Port[1], d.Port[0]}
-	newVW := NewDaemon(d.BinPath, port, d.Children, d.Model.Path, d.Test, d.Model.Updatable)
+	newVW := NewDaemon(d.BinPath, port, d.Children, d.Model.Path, d.Test, d.Model.Updatable, d.VwOpts)
 	if err := newVW.Run(); err != nil {
 		log.Fatal(err)
 	}
