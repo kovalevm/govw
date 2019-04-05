@@ -1,7 +1,9 @@
 package govw
 
 import (
+	"fmt"
 	"log"
+	"net"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -9,41 +11,38 @@ import (
 )
 
 func runCommand(command string, quiet bool) ([]byte, error) {
-	switch quiet {
-	case false:
-		val, err := exec.Command("sh", "-c", command).Output()
-		if err != nil {
-			return []byte{}, err
-		}
-		return val, nil
-	case true:
+	if quiet {
 		err := exec.Command("sh", "-c", command).Start()
 		if err != nil {
 			return []byte{}, err
 		}
 		return []byte{}, nil
-	default:
-		panic("We have some problem with executing command!")
 	}
+
+	val, err := exec.Command("sh", "-c", command).Output()
+	if err != nil {
+		return []byte{}, err
+	}
+	return val, nil
 }
 
 // ParsePredictResult get prediction result from VW daemon
 // and convert this result into Prediction struct.
-func ParsePredictResult(predict *string) *Prediction {
+func ParsePredictResult(predict *string) (*Prediction, error) {
 	p := strings.TrimRight(*predict, "\n")
 
 	r := strings.Split(p, " ")
 
 	val, err := strconv.ParseFloat(r[0], 64)
 	if err != nil {
-		log.Fatal("Error while parsing prediction value:", err)
+		return nil, fmt.Errorf("error parsing prediction value: %s", err)
 	}
 
 	if len(r) == 1 {
-		return &Prediction{val, ""}
+		return &Prediction{val, ""}, nil
 	}
 
-	return &Prediction{val, r[1]}
+	return &Prediction{val, r[1]}, nil
 }
 
 // RecreateDaemon create new VW daemon on another port (default VW port + 1),
@@ -52,13 +51,17 @@ func RecreateDaemon(d *VWDaemon) {
 	log.Println("Start recreating daemon on new port:", d.Port[1])
 
 	port := [2]int{d.Port[1], d.Port[0]}
-	newVW := NewDaemon(d.BinPath, port, d.Children, d.Model.Path, d.Test, d.Model.Updatable, d.VwOpts)
+	newVW, err := NewDaemon(d.BinPath, port, d.Children, d.Model.Path, d.Test, d.VwOpts)
+	if err != nil {
+		log.Fatal("Error while initializing VW daemon entity!", err)
+	}
+
 	if err := newVW.Run(); err != nil {
 		log.Fatal(err)
 	}
 
 	tmpVW := *d
-	*d = newVW
+	d = newVW
 
 	tmpVW.Stop()
 	log.Println("Finished recreating daemon on new port:", d.Port[0])
@@ -80,4 +83,32 @@ func ModelFileChecker(vw *VWDaemon) {
 			RecreateDaemon(vw)
 		}
 	}
+}
+
+func CreateTCPConn(host string, port int) (*net.TCPConn, error) {
+	tcpAddr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", host, port))
+	if err != nil {
+		return nil, fmt.Errorf("error resolving IP addr: %s", err)
+	}
+
+	conn, err := net.DialTCP("tcp", nil, tcpAddr)
+	if err != nil {
+		return nil, fmt.Errorf("error dialing TCP: %s", err)
+	}
+
+	return conn, nil
+}
+
+func AutoDump(c *VWClient, path string, dur time.Duration) {
+	ticker := time.NewTicker(dur)
+	go func() {
+		for range ticker.C {
+			err := c.DumpModel(path)
+			if err != nil {
+				log.Println("Failed to dump the model ", err)
+			} else {
+				log.Println("Model was dumped to ", path)
+			}
+		}
+	}()
 }

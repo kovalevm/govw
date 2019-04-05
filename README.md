@@ -5,7 +5,7 @@ Install
 -------
 
 ```
-$ go get github.com/doncasper/govw
+$ go get github.com/kovalevm/govw
 ```
 
 Usage
@@ -18,20 +18,37 @@ import (
 	"fmt"
 	"log"
 	
-	"github.com/doncasper/govw"
+	"github.com/kovalevm/govw"
 )
 
 func main() {
-	// First we should create the VW daemon
-	vw := govw.NewDaemon("/usr/local/bin/vw", [2]int{26542, 26543}, 10, "/path/to/your.model", true, true)
+	var err error
+    treats := 10
+    ports := [2]int{26542, 26543}
+    modelPath := "/full/path/to/some.model"
+    testOnly := true
 
-	// Then we can run VW daemon
-	if err := vw.Run(); err != nil {
-		log.Fatal("Starting daemon error: ", err)
-	}
+    // initialize and run a daemon
+    daemon, err = govw.NewDaemon("daemon", ports, treats, modelPath, testOnly, "")
+    if err != nil {
+        log.Fatal("Error while initializing VW daemon entity!", err)
+    }
+
+    if err = daemon.Run(); err != nil {
+        log.Fatal("Error while running VW daemon!", err)
+    }
+
+    // create a client
+    client = govw.NewClient()
+    if err = client.Connect("", ports[0], treats/5); err != nil {
+        log.Fatal("Error while connecting VW daemon!", err)
+    }
+
+    // auto dump the model
+    govw.AutoDump(client, modelPath, 30*time.Second)
 
 	// And then we can send data for prediction
-	p, err := vw.Predict("1 tag_name| 100:1 200:0.45 250:0.8")
+	p, err := client.Predict("1 tag_name| 100:1 200:0.45 250:0.8")
 	if err != nil {
 		log.Fatal("Predicting error: ", err)
 	}
@@ -40,7 +57,3 @@ func main() {
 }
 ```
 
-Stability
----------
-
-At the moment, the client version is not stable and can be changed without notice.
