@@ -2,6 +2,7 @@ package govw
 
 import (
 	"fmt"
+	"github.com/valyala/fasthttp"
 	"log"
 	"net"
 	"os/exec"
@@ -85,13 +86,13 @@ func ModelFileChecker(vw *VWDaemon) {
 	}
 }
 
-func CreateTCPConn(host string, port int) (*net.TCPConn, error) {
+func CreateTCPConn(host string, port int) (net.Conn, error) {
 	tcpAddr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", host, port))
 	if err != nil {
 		return nil, fmt.Errorf("error resolving IP addr: %s", err)
 	}
 
-	conn, err := net.DialTCP("tcp", nil, tcpAddr)
+	conn, err := fasthttp.Dial(tcpAddr.String())
 	if err != nil {
 		return nil, fmt.Errorf("error dialing TCP: %s", err)
 	}

@@ -77,7 +77,7 @@ func main() {
 
 	// create a client
 	client = govw.NewClient()
-	if err = client.Connect("", ports[0], treats/5); err != nil {
+	if err = client.Connect("", ports[0], treats/2); err != nil {
 		log.Fatal("Error while connecting VW daemon!", err)
 	}
 
