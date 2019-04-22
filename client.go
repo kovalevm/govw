@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/fatih/pool"
+	"io"
 	"net"
 	"strings"
 )
@@ -18,7 +19,8 @@ type Prediction struct {
 }
 
 type VWClient struct {
-	Pool pool.Pool
+	Pool        pool.Pool
+	MessageSize int
 }
 
 func NewClient() *VWClient {
@@ -35,6 +37,10 @@ func (th *VWClient) Connect(host string, port int, maxConnections int) error {
 	var err error
 	if th.Pool, err = pool.NewChannelPool(initialCap, maxConnections, factory); err != nil {
 		return fmt.Errorf("failed to create tcp pull: %s", err)
+	}
+
+	if th.MessageSize == 0 {
+		th.MessageSize = 9 // bytes
 	}
 
 	return nil
@@ -71,13 +77,15 @@ func (th *VWClient) ask(waitResponse bool, requests ...string) ([]string, error)
 	}
 
 	reader := bufio.NewReader(conn)
-	for i := 0; i < size; i++ {
-		res, err := reader.ReadString('\n')
-		if err != nil && err.Error() != "EOF" {
-			return responses, fmt.Errorf("failed to read response: %s", err)
-		}
+	p := make([]byte, size*th.MessageSize-1) //like 10.966668
+	if _, err := io.ReadFull(reader, p); err != nil {
+		return nil, fmt.Errorf("failed to read response: %s", err)
+	}
 
-		responses[i] = res
+	lines := strings.Split(string(p), "\n")
+	for i := 0; i < len(lines); i++ {
+		str := lines[i]
+		responses = append(responses, str)
 	}
 
 	return responses, nil
